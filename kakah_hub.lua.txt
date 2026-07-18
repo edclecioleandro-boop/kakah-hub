@@ -1,0 +1,189 @@
+-- Tipo: httpget_script (Kakah Hub Corrigido Completo)
+-- AVISO: Scripts que alteram comportamento do jogo podem violar os Termos de Serviço do Roblox
+-- Use por sua conta e risco.
+
+-- 🔹 Carregando a Redz Library (com tratamento de erro)
+local success, Library = pcall(function()
+    return loadstring(game:HttpGet("https://pastebin.com/raw/XqZsnzRQ", true))()
+end)
+if not success or not Library then
+    warn("Não foi possível carregar a GUI library:", Library)
+    return
+end
+
+workspace.FallenPartsDestroyHeight = -math.huge
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Garantir LocalPlayer (espera breve caso não exista imediatamente)
+if not LocalPlayer then
+    Players.PlayerAdded:Wait()
+    LocalPlayer = Players.LocalPlayer
+end
+
+-- Guardar referências e estados
+local InfiniteJumpEnabled = false
+local connections = {}
+local currentSpeed = 16
+local currentJump = 50
+local defaultSpeed = 16
+local defaultJump = 50
+local humanoidRef -- atual humanoid da character
+
+-- Funções utilitárias
+local function applyHumanoidValues(humanoid)
+    if not humanoid then return end
+    -- Armazenar defaults na primeira vez que encontrar humanoid
+    defaultSpeed = defaultSpeed or humanoid.WalkSpeed or 16
+    defaultJump = defaultJump or humanoid.JumpPower or 50
+
+    humanoid.WalkSpeed = math.clamp(currentSpeed, 0, 10000) -- limite safety
+    humanoid.JumpPower = math.clamp(currentJump, 0, 10000)
+end
+
+local function onCharacterAdded(character)
+    humanoidRef = character:WaitForChild("Humanoid", 5)
+    if humanoidRef then
+        applyHumanoidValues(humanoidRef)
+    end
+end
+
+-- Se já existir character, aplicar
+if LocalPlayer.Character then
+    onCharacterAdded(LocalPlayer.Character)
+end
+connections.characterConn = LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
+
+-- 🔹 Criando a Janela Principal
+local Window = Library:MakeWindow({
+    Title = "Kakah Hub | Brookhaven",
+    SubTitle = "By:kakah",
+    LoadText = "Carregando Kakah Hub...",
+    Flags = "Kakah_Hub"
+})
+
+-- 🔹 Botão de minimizar
+Window:AddMinimizeButton({
+    Button = { Image = "rbxassetid://90894892797730", BackgroundTransparency = 1 },
+    Corner = { CornerRadius = UDim.new(35, 1) },
+})
+
+-- =========================================================
+-- 🔹 ABA INFO
+-- =========================================================
+local InfoTab = Window:MakeTab({ "Info", "info" })
+
+InfoTab:AddSection({ "Informations" })
+InfoTab:AddSection({ "Credits" })
+InfoTab:AddParagraph({ "Programmer:", "Frosy230_0,kakahdev" })
+InfoTab:AddParagraph({ "Team:", "KakahDev's" })
+
+InfoTab:AddSection({ "Internet Things" })
+InfoTab:AddDiscordInvite({
+    Name = "Kakah Hub",
+    Description = "Discord Kakah",
+    Logo = "rbxassetid://90894892797730",
+    Invite = "https://discord.gg/BUZ5S6Cvr",
+})
+
+InfoTab:AddSection({ "Information" })
+local info = {}
+info["Your Username:"] = LocalPlayer and (LocalPlayer.Name or "Unidentified") or "Unidentified"
+info["Your Display Name:"] = LocalPlayer and (LocalPlayer.DisplayName or "Unidentified") or "Unidentified"
+info["Your User Id:"] = LocalPlayer and tostring(LocalPlayer.UserId) or "Unidentified"
+info["Your Account Age:"] = LocalPlayer and tostring(LocalPlayer.AccountAge) or "Unidentified"
+
+for key, value in pairs(info) do
+    InfoTab:AddParagraph({ key, tostring(value) })
+end
+
+InfoTab:AddParagraph({ "You Language:", "Português" })
+InfoTab:AddParagraph({ "You are Playing:", "Brookhaven RP 🏡" })
+
+-- =========================================================
+-- 🔹 ABA FUN
+-- =========================================================
+local FunTab = Window:MakeTab({ "Fun", "gamepad" })
+
+-- Slider Speed
+FunTab:AddSlider({
+    Name = "Speed Player",
+    Min = 16,
+    Max = 500,
+    Default = currentSpeed,
+    Callback = function(Value)
+        currentSpeed = math.clamp(Value, 0, 10000)
+        if humanoidRef and humanoidRef.Parent then
+            humanoidRef.WalkSpeed = currentSpeed
+        end
+    end
+})
+
+-- Slider JumpPower
+FunTab:AddSlider({
+    Name = "Jumppower",
+    Min = 50,
+    Max = 500,
+    Default = currentJump,
+    Callback = function(Value)
+        currentJump = math.clamp(Value, 0, 10000)
+        if humanoidRef and humanoidRef.Parent then
+            humanoidRef.JumpPower = currentJump
+        end
+    end
+})
+
+-- Toggle Infinite Jump
+FunTab:AddToggle({
+    Name = "Infinite Jump",
+    Default = false,
+    Callback = function(Value)
+        InfiniteJumpEnabled = Value
+    end
+})
+
+-- Reset / Restore defaults
+FunTab:AddButton({
+    Name = "Reset to Defaults",
+    Callback = function()
+        currentSpeed = defaultSpeed or 16
+        currentJump = defaultJump or 50
+        if humanoidRef and humanoidRef.Parent then
+            humanoidRef.WalkSpeed = currentSpeed
+            humanoidRef.JumpPower = currentJump
+        end
+        -- Se a GUI library expõe um método para atualizar sliders, chamar aqui (varia por lib)
+        Library:Notify({Title = "Kakah Hub", Description = "Valores restaurados para padrão", Duration = 3})
+    end
+})
+
+-- Conexão para Infinite Jump (uma única conexão, usa flag)
+connections.jumpConn = UserInputService.JumpRequest:Connect(function()
+    if InfiniteJumpEnabled then
+        local char = LocalPlayer.Character
+        if char then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum and hum:GetState() ~= Enum.HumanoidStateType.Dead then
+                hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end
+    end
+end)
+
+-- Cleanup quando a interface for fechada ou quando necessário
+local function cleanup()
+    for _, conn in pairs(connections) do
+        if conn and typeof(conn) == "RBXScriptConnection" then
+            conn:Disconnect()
+        end
+    end
+    connections = {}
+end
+
+-- Opcional: expor função de cleanup por segurança
+_G.KakahHubCleanup = cleanup
+
+-- Fim do script
+Library:Notify({Title = "Kakah Hub", Description = "Carregado com melhorias de segurança e estabilidade.", Duration = 4})
