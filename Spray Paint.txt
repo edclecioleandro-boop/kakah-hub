@@ -1,1 +1,201 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/LunarielLovely/Scripts/refs/heads/main/SprayPaint"))()
+--[[
+Made by Rouxhaver (Modified for Multi-Language Support)
+When two people execute the script they can use the text box to chat with each other privately and uncensored
+Note: only works on the newer bubble chat and not the old one and long messages get tagged
+]]
+
+-- Dicionários de substituição para diferentes línguas
+local linguas = {
+    -- 1. Chinês (Seu original)
+    chinese = {
+        a="的", b="一", c="是", d="不", e="了", f="人", g="我", h="在", i="有", j="他", k="这", l="为", 
+        m="之", n="大", o="来", p="以", q="个", r="中", s="上", t="们", u="到", v="说", w="国", x="和", y="地", z="也"
+    },
+    -- 2. Árabe
+    arabic = {
+        a="ا", b="ب", c="ت", d="ث", e="ج", f="ح", g="خ", h="د", i="ذ", j="ر", k="ز", l="س", 
+        m="ش", n="ص", o="ض", p="ط", q="ظ", r="ع", s="غ", t="ف", u="ق", v="ك", w="ل", x="م", y="ن", z="ه"
+    },
+    -- 3. Símbolos/Rúnico
+    symbols = {
+        a="ᔑ", b="ʖ", c="ᓵ", d="↸", e="ᒲ", f="⎓", g="⊣", h="⍑", i="╎", j="⋮", k="ꖌ", l="ꖎ", 
+        m="ᒲ", n="リ", o="𝙹", p="!¡", q="ᑳ", r="∷", s="ᓱ", t="ℸ", u="⚍", v="⍊", w="∴", x="Section", y="||", z="⨳"
+    },
+    -- 4. Português de Portugal (Criptografia usando acentuações complexas de PT-PT)
+    portuguese = {
+        a="â", b="ç", c="ê", d="í", e="õ", f="ú", g="à", h="ó", i="û", j="ã", k="é", l="ô",
+        m="ü", n="ç", o="á", p="ē", q="ī", r="ō", s="ū", t="ǎ", u="ǐ", v="ǒ", w="ǔ", x="ÿ", y="ñ", z="ś"
+    }
+}
+
+-- Língua padrão ativa
+local lingua_ativa = "chinese"
+-- Prefixo para identificar o chat secreto (cada língua usa um prefixo único)
+local prefixos = {
+    chinese = "三",
+    arabic = "ش",
+    symbols = "⨳",
+    portuguese = "🇵🇹" -- Prefixo visual do ID de Portugal para o sistema reconhecer
+}
+
+-- Função para converter baseado na língua ativa
+function convert(str, lang)
+    str = str:lower()
+    local dicionario = linguas[lang or lingua_ativa]
+    for char, subst in pairs(dicionario) do
+        str = str:gsub(char, subst)
+    end
+    return str
+end
+
+-- Função para reverter baseado na língua que foi recebida
+function unconvert(str, lang)
+    str = str:lower()
+    local dicionario = linguas[lang]
+    if not dicionario then return str end
+    
+    -- Inverte o dicionário para traduzir de volta
+    local reverso = {}
+    for k, v in pairs(dicionario) do
+        reverso[v] = k
+    end
+    
+    for subst, char in pairs(reverso) do
+        str = str:gsub(subst, char)
+    end
+    return str
+end
+
+function chat(str)
+    if game:GetService("TextChatService").ChatVersion == Enum.ChatVersion.LegacyChatService then
+        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(str,"All")
+    else
+        game:GetService("TextChatService").TextChannels.RBXGeneral:SendAsync(str)
+    end
+end
+
+player = game:GetService("Players").LocalPlayer
+
+SG = Instance.new("ScreenGui",player.PlayerGui)
+
+frame = Instance.new("Frame",SG)
+frame.Size = UDim2.new(0.2,0,0.25,0)
+frame.AnchorPoint = Vector2.new(0.5,0.5)
+frame.Position = UDim2.new(0.5,0,0.8,0)
+frame.Active = true
+frame.Draggable = true
+frame.BackgroundColor3 = Color3.new(0.14902, 0.8, 1)
+
+textbox = Instance.new("TextBox",frame)
+textbox.AnchorPoint = Vector2.new(0.5,0.5)
+textbox.Size = UDim2.new(0.95,0,0.45,0)
+textbox.Position = UDim2.new(0.5,0,0.5,0)
+textbox.TextScaled = true
+textbox.BackgroundColor3 = Color3.new(1,1,1)
+textbox.Text = "Escreva aqui"
+textbox.TextColor3 = Color3.new(0, 0, 0)
+
+title = Instance.new("TextLabel",frame)
+title.Size = UDim2.new(0.4,0,0.25,0)
+title.TextScaled = true
+title.Text = "Hacker Chat v3"
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.new(0, 0, 0)
+
+-- Botão para alternar línguas
+langbutton = Instance.new("TextButton",frame)
+langbutton.Size = UDim2.new(0.4,0,0.25,0)
+langbutton.Position = UDim2.new(0.45,0,0,0)
+langbutton.TextScaled = true
+langbutton.BackgroundColor3 = Color3.new(0.8, 0.8, 0.8)
+langbutton.Text = "Língua: Chinês"
+langbutton.TextColor3 = Color3.new(0, 0, 0)
+
+local modos = {"chinese", "arabic", "symbols", "portuguese"}
+local nomes_modos = {chinese = "Chinês", arabic = "Árabe", symbols = "Símbolos", portuguese = "Português (PT)"}
+local modo_index = 1
+
+langbutton.MouseButton1Up:Connect(function()
+    modo_index = modo_index + 1
+    if modo_index  #modos then modo_index = 1 end
+    lingua_ativa = modos[modo_index]
+    langbutton.Text = "Língua: " .. nomes_modos[lingua_ativa]
+end)
+
+closebutton = Instance.new("TextButton",frame)
+closebutton.Size = UDim2.new(0.15,0,0.25,0)
+closebutton.AnchorPoint = Vector2.new(1,0)
+closebutton.TextScaled = true
+closebutton.BackgroundColor3 = Color3.new(1, 0, 0.0156863)
+closebutton.Text = "X"
+closebutton.Position = UDim2.new(1,0,0,0)
+closebutton.TextColor3 = Color3.new(1, 1, 1)
+
+closebutton.MouseButton1Up:Connect(function()
+    SG:Destroy()
+end)
+
+-- Envia a mensagem com o prefixo correto da língua selecionada
+textbox.FocusLost:Connect(function()
+    local prefixo = prefixos[lingua_ativa]
+    chat(prefixo .. convert(textbox.Text, lingua_ativa))
+end)
+
+local chatScroller = nil
+pcall(function()
+    chatScroller = player.PlayerGui.Chat.Frame.ChatChannelParentFrame.Frame_MessageLogDisplay.Scroller
+end)
+
+if not chatScroller then
+    chatScroller = game:GetService("CoreGui").ExperienceChat.appLayout.chatWindow.scrollingView.bottomLockedScrollView.RCTScrollView.RCTScrollContentView
+end
+
+bubbleChat = nil
+pcall(function()
+    bubbleChat = game:GetService("CoreGui").ExperienceChat.bubbleChat
+end)
+
+if not bubbleChat then
+    bubbleChat = game:GetService("CoreGui").BubbleChat
+end
+
+if bubbleChat == nil then
+    error("could not find bubble chat")
+end
+
+-- Detecta qual língua o outro jogador usou pelo prefixo e traduz de volta
+function decodificar_mensagem(texto)
+    for lang, prefixo in pairs(prefixos) do
+        if texto:match(prefixo) then
+            local limpo = texto:gsub(prefixo, "")
+            return unconvert(limpo, lang), true
+        end
+    end
+    return texto, false
+end
+
+chatScroller.DescendantAdded:Connect(function(msg)
+    if msg:IsA("TextLabel") and msg.Name == "BodyText" then
+        local label = msg
+        local mensagem_original = msg.Text
+        local traduzido, foi_secreto = decodificar_mensagem(mensagem_original)
+        
+        if foi_secreto then
+            label.TextColor3 = Color3.new(1, 0.85098, 0) -- Amarelo para destacar
+            label.Text = "    " .. traduzido
+        end
+    end
+end)
+
+if bubbleChat then
+    bubbleChat.DescendantAdded:Connect(function(bubble)
+        wait(0.5)
+        if bubble:IsA("TextLabel") then
+            local traduzido, foi_secreto = decodificar_mensagem(bubble.Text)
+            if foi_secreto then
+                bubble.Parent.BackgroundColor3 = Color3.new(1, 0.85098, 0)
+                bubble.Text = traduzido
+            end
+        end
+    end)
+end
